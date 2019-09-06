@@ -7,29 +7,26 @@ import ray
 @ray.remote
 class SparseParameterServer(object):
     def __init__(self, keys, indices, values):
-        print("a")
         values = [value.clone() for value in values]
         self.weights = {}
         for k, i, v in zip(keys, indices, values):
             if k not in self.weights:
                 self.weights[k] = {}
             self.weights[k][i] = v
-                
-        #self.weights = dict(zip(keys, indices, values))
 
-    #def __init__(self, keys, values):
-    #    print("b")
-    #    #assert(0)
-        
-    #def push_dense(self, keys, values):
-    #    pass
-        
-    #def push(self, keys, indices, values):
-    #    for key, id, value in zip(keys, idx,  values):
-    #        self.weights[key, id] += value
+    def push(self, keys, indices, values):
+        for key, id, value in zip(keys, idx,  values):
+            self.weights[key][id] = value
 
     def pull(self, keys, indices):
         return [self.weights[key][idx] for key, idx in zip(keys, indices)]
 
-    #def pull_dense(self, keys):
-    #    pass
+    def pull_dense(self, keys):
+        ret = {}
+        for k in keys:
+            ret[k] = [(i, v) for i, v in self.weights[k].items()]
+        return ret
+
+    def get_keys(self):
+        print(list(self.weights.keys()))
+        return list(self.weights.keys())

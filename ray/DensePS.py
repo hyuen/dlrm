@@ -3,6 +3,7 @@ import ray
 # Dense parameter server
 # Granularity is the parameter
 
+
 @ray.remote
 class DenseParameterServer(object):
     def __init__(self, keys, values):
@@ -15,6 +16,3 @@ class DenseParameterServer(object):
 
     def pull(self, keys):
         return [self.weights[key] for key in keys]
-
-
-
