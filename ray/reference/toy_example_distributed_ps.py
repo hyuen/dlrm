@@ -45,7 +45,6 @@ class ParameterServer(object):
     def forward(self, inputs, lens):
         ret = self.model.forward(inputs, lens)
         return ret
-        
 
     def reduce(self, gradients):
         if gradients[0].layout == torch.strided:
@@ -61,7 +60,6 @@ class ParameterServer(object):
     # get n lists of gradients, one per trainer
     # each list will contain all the gradients for all the elements in the net
     def apply_gradients(self, *gradients):
-        #print("there are gradients for n trainers:", len(gradients))
         summed_gradients = [self.reduce(grads)
                             for grads in zip(*gradients)]
 
@@ -74,13 +72,11 @@ class ParameterServer(object):
         return self.model.state_dict()
 
     def backward(self, gradient, x, offsets):
-        #print("got", self.n, gradient, x, offsets)
         y = self.model.forward(x, offsets)
+        # print("PS", x.shape, offsets.shape, y.shape, gradient.shape)
         loss = self.criterion(y, gradient)
-        #print(loss)
         self.optimizer.zero_grad()
         loss.backward()
-        #        self.model.backward(gradient)
 
 
 @ray.remote
@@ -97,17 +93,18 @@ class Trainer(object):
     def read_data(self):
         # Fake some inputs, should get real inputs
         #
-        x1 = torch.LongTensor(np.sort(np.random.choice(20000, 10, replace=False)))
+        x1 = torch.LongTensor(np.sort(np.random.choice(20, 10, replace=False)))
         offsets1 = torch.LongTensor([0])
         
-        x2 = torch.LongTensor(np.sort(np.random.choice(30000, 10, replace=False)))
+        x2 = torch.LongTensor(np.sort(np.random.choice(30, 10, replace=False)))
         offsets2 = torch.LongTensor([0])
         yhat = torch.FloatTensor([[np.random.rand()]])
 
         return x1, offsets1, x2, offsets2, yhat
 
     def backward_pass_to_embeddings(self, layer, input, output):
-        emb_grad = torch.split(input[2], 8, dim=0)
+        emb_grad = torch.split(torch.transpose(input[2], 0, 1), 8, dim=1)
+        # print("emb", emb_grad[0].shape, input[2].shape)
 
         x1_ref, x2_ref, offsets1_ref, offsets2_ref = self.state
         
@@ -143,12 +140,6 @@ class Trainer(object):
         loss.backward()    
         self.optimizer.step()
 
-
-        
-
-
-
-        
         return loss
     
     def get_weights(self):
@@ -161,13 +152,13 @@ class Trainer(object):
 def dist_train():
     ray.init()
 
-    emb_dim = 64
-    overarch_dim = 128
+    emb_dim = 8
+    overarch_dim = emb_dim * 2
     
-    pses = [ParameterServer.remote(emb_dim, 20000), ParameterServer.remote(emb_dim, 30000)]
+    pses = [ParameterServer.remote(emb_dim, 20), ParameterServer.remote(emb_dim, 30)]
     trainers = [Trainer.remote(overarch_dim, pses), Trainer.remote(overarch_dim, pses)]
 
-    for i in range(1000):       
+    for i in range(10):       
         print("iteration", i)
     
 

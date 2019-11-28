@@ -138,4 +138,4 @@ if __name__ == "__main__":
     #serial()
     model = Model()
     print(model.state_dict())
-    #dist_train()
+    dist_train()
